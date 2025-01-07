@@ -1,1 +1,103 @@
+<script>
+    const messageForm = document.getElementById('messageForm');
+    const messageInput = document.getElementById('messageInput');
+    const messagesContainer = document.getElementById('messages');
 
+    messageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const content = messageInput.value.trim();
+        if (!content) return;
+
+        // Add message to UI immediately for better UX
+        addMessage(content, 'sent');
+        
+        // Clear input
+        messageInput.value = '';
+
+        try {
+            // Send message to server
+            const response = await fetch('/api/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: content }), // Update JavaScript to match API's expected format
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to send message');
+            }
+
+            // Get response data
+            const data = await response.json();
+            console.log('Message sent:', data);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            // Add error message to UI
+            addMessage('Failed to send message. Please try again.', 'error');
+        }
+    });
+
+    function addMessage(text, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = text;
+        messagesContainer.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Function to format timestamp
+    function formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString();
+    }
+
+    // Function to fetch messages
+    async function fetchMessages() {
+        try {
+            const response = await fetch('/api/messages');
+            if (!response.ok) {
+                throw new Error('Failed to fetch messages');
+            }
+            
+            const data = await response.json();
+            
+            // Clear existing messages
+            messagesContainer.innerHTML = '';
+            
+            // Add each message to UI
+            data.messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message received';
+                
+                const content = document.createElement('div');
+                content.textContent = msg.content;
+                messageDiv.appendChild(content);
+                
+                const timestamp = document.createElement('div');
+                timestamp.className = 'timestamp';
+                timestamp.textContent = formatTimestamp(msg.created_at);
+                messageDiv.appendChild(timestamp);
+                
+                messagesContainer.appendChild(messageDiv);
+            });
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+        } catch (error) {
+            console.error('Error:', error);
+            addMessage('Failed to load messages. Please refresh the page.', 'error');
+        }
+    }
+
+    // Fetch messages on page load
+    fetchMessages();
+
+    // Fetch messages every 5 seconds
+    setInterval(fetchMessages, 5000);
+</script>
