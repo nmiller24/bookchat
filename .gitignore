@@ -22,3 +22,7 @@ env/
 .idea/
 *.swp
 *.swo
+
+# SQLite database
+*.db
+database/*.db
