@@ -12,6 +12,7 @@ This folder contains a series of prompts to help recreate the BookChat applicati
 5. `5_javascript.txt` - Chat functionality implementation
 6. `6_github_integration.txt` - Version control setup
 7. `7_technical_specs.txt` - Detailed technical specifications and verification steps
+8. `8_testing.txt` - Comprehensive test suite implementation
 
 ## How to Use
 
@@ -19,7 +20,8 @@ This folder contains a series of prompts to help recreate the BookChat applicati
 2. Follow each subsequent prompt sequentially
 3. Each prompt builds upon the previous ones
 4. Use `7_technical_specs.txt` as a reference throughout the development process
-5. Verify each component works before moving to the next prompt
+5. Implement tests as you develop using `8_testing.txt` as a guide
+6. Verify each component works before moving to the next prompt
 
 ## Prerequisites
 
@@ -29,6 +31,7 @@ Before starting:
 - Python 3.8 or higher
 - Text editor or IDE
 - Basic understanding of web development
+- Familiarity with pytest for testing
 
 ## Final Verification
 
@@ -38,3 +41,4 @@ After completing all prompts, verify that:
 - Real-time updates are working
 - All error cases are handled gracefully
 - GitHub integration is functioning correctly
+- All tests pass with good coverage

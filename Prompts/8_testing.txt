@@ -1,0 +1,188 @@
+Let's add comprehensive testing to our chat application:
+
+1. Create test directory structure:
+```
+tests/
+├── __init__.py
+├── test_app.py
+├── test_db.py
+├── test_git_handler.py
+└── conftest.py
+```
+
+2. Install testing dependencies:
+Add to requirements.txt:
+```
+pytest
+pytest-asyncio
+pytest-cov
+```
+
+3. Create test configuration (conftest.py):
+```python
+import pytest
+import os
+import tempfile
+import sqlite3
+from utils.db import DatabaseManager
+
+@pytest.fixture
+def temp_db():
+    # Create temporary database for testing
+    db_fd, db_path = tempfile.mkstemp()
+    
+    # Create test database instance
+    test_db = DatabaseManager()
+    test_db.db_path = db_path
+    
+    # Create schema
+    with test_db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                git_commit_hash TEXT,
+                synced BOOLEAN DEFAULT FALSE
+            )
+        """)
+    
+    yield test_db
+    
+    # Cleanup
+    os.close(db_fd)
+    os.unlink(db_path)
+```
+
+4. Implement Database Tests (test_db.py):
+```python
+def test_create_message(temp_db):
+    # Test message creation
+    message_id = temp_db.create_message("Test message")
+    assert message_id is not None
+    
+    # Verify message exists
+    message = temp_db.get_message(message_id)
+    assert message['content'] == "Test message"
+    assert message['synced'] is False
+
+def test_get_messages(temp_db):
+    # Create multiple messages
+    messages = ["Message 1", "Message 2", "Message 3"]
+    for msg in messages:
+        temp_db.create_message(msg)
+    
+    # Test retrieval
+    retrieved = temp_db.get_messages(limit=10)
+    assert len(retrieved) == 3
+    assert retrieved[0]['content'] == "Message 3"  # Most recent first
+```
+
+5. Implement Server Tests (test_app.py):
+```python
+import json
+import pytest
+from http.client import HTTPConnection
+from threading import Thread
+from app import run_server
+
+@pytest.fixture
+def server():
+    # Start server in a separate thread
+    server_thread = Thread(target=run_server, daemon=True)
+    server_thread.start()
+    yield
+    # Server will be terminated when test ends due to daemon=True
+
+def test_get_messages(server):
+    conn = HTTPConnection('localhost', 5002)
+    conn.request('GET', '/api/messages')
+    response = conn.getresponse()
+    assert response.status == 200
+    
+    data = json.loads(response.read())
+    assert 'messages' in data
+    assert isinstance(data['messages'], list)
+
+def test_create_message(server):
+    conn = HTTPConnection('localhost', 5002)
+    message = {'content': 'Test message'}
+    headers = {'Content-Type': 'application/json'}
+    
+    conn.request('POST', '/api/messages', 
+                body=json.dumps(message),
+                headers=headers)
+    
+    response = conn.getresponse()
+    assert response.status == 201
+    
+    data = json.loads(response.read())
+    assert data['content'] == 'Test message'
+```
+
+6. Implement Git Handler Tests (test_git_handler.py):
+```python
+from utils.git_handler import git_handler
+
+def test_sync_message(temp_db):
+    # Create a test message
+    message_id = temp_db.create_message("Test message")
+    
+    # Try to sync
+    commit_hash = git_handler.sync_message(message_id, "Test message")
+    assert commit_hash is not None
+    
+    # Verify sync status
+    message = temp_db.get_message(message_id)
+    assert message['git_commit_hash'] == commit_hash
+    assert message['synced'] is True
+```
+
+7. Add test running script (run_tests.py):
+```python
+import pytest
+import sys
+
+if __name__ == "__main__":
+    # Run tests with coverage report
+    sys.exit(pytest.main([
+        "--cov=.",
+        "--cov-report=term-missing",
+        "tests/"
+    ]))
+```
+
+8. Update .gitignore for test files:
+```
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+```
+
+Running Tests:
+```bash
+# Run all tests
+python run_tests.py
+
+# Run specific test file
+pytest tests/test_db.py -v
+
+# Run with coverage report
+pytest --cov=. tests/
+```
+
+Verification Steps:
+1. All tests pass successfully
+2. Coverage report shows adequate test coverage
+3. Each component (db, server, git) has its own test suite
+4. Test database is properly isolated from production
+5. Git operations are properly mocked in tests
+
+Best Practices:
+1. Always run tests before committing changes
+2. Keep tests up to date with new features
+3. Use meaningful test names and descriptions
+4. Test both success and failure cases
+5. Keep test code clean and maintainable
