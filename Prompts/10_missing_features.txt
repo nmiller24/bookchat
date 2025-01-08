@@ -1,0 +1,272 @@
+Implementation Guide for Missing Features
+
+1. Rate Limiting (utils/rate_limiter.py):
+```python
+from collections import defaultdict
+from time import time
+
+class RateLimiter:
+    def __init__(self, max_requests=60, window_seconds=60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.requests = defaultdict(list)
+    
+    def is_allowed(self, client_ip):
+        now = time()
+        self.requests[client_ip] = [
+            req_time for req_time in self.requests[client_ip]
+            if now - req_time < self.window_seconds
+        ]
+        
+        if len(self.requests[client_ip]) >= self.max_requests:
+            return False
+            
+        self.requests[client_ip].append(now)
+        return True
+
+# Add to app.py ChatRequestHandler
+def do_POST(self):
+    client_ip = self.client_address[0]
+    if not rate_limiter.is_allowed(client_ip):
+        self.send_error(429, 'Too Many Requests')
+        return
+    # ... rest of the POST handler
+```
+
+2. Backup System (utils/backup.py):
+```python
+import os
+import shutil
+import sqlite3
+from datetime import datetime
+import logging
+from utils.db import DB_PATH
+
+class BackupManager:
+    def __init__(self, backup_dir='backups', max_backups=5):
+        self.backup_dir = backup_dir
+        self.max_backups = max_backups
+        os.makedirs(backup_dir, exist_ok=True)
+        
+    def create_backup(self):
+        """Create a timestamped backup of the database."""
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_path = os.path.join(self.backup_dir, f'chat_db_{timestamp}.db')
+        
+        try:
+            # Create backup
+            shutil.copy2(DB_PATH, backup_path)
+            logging.info(f"Created backup: {backup_path}")
+            
+            # Cleanup old backups
+            self._cleanup_old_backups()
+            
+            return backup_path
+        except Exception as e:
+            logging.error(f"Backup failed: {str(e)}")
+            raise
+    
+    def _cleanup_old_backups(self):
+        """Keep only the most recent backups."""
+        backups = sorted([
+            f for f in os.listdir(self.backup_dir)
+            if f.startswith('chat_db_')
+        ])
+        
+        while len(backups) > self.max_backups:
+            oldest = os.path.join(self.backup_dir, backups.pop(0))
+            os.remove(oldest)
+            logging.info(f"Removed old backup: {oldest}")
+
+# Add to app.py
+from utils.backup import BackupManager
+backup_manager = BackupManager()
+
+# Create daily backup
+def create_daily_backup():
+    try:
+        backup_manager.create_backup()
+    except Exception as e:
+        logging.error(f"Daily backup failed: {str(e)}")
+```
+
+3. Monitoring System (utils/monitor.py):
+```python
+import psutil
+import logging
+from datetime import datetime
+from collections import deque
+
+class SystemMonitor:
+    def __init__(self, history_size=100):
+        self.start_time = datetime.now()
+        self.request_count = 0
+        self.error_count = 0
+        self.response_times = deque(maxlen=history_size)
+        
+    def log_request(self, response_time):
+        self.request_count += 1
+        self.response_times.append(response_time)
+    
+    def log_error(self):
+        self.error_count += 1
+    
+    def get_stats(self):
+        uptime = datetime.now() - self.start_time
+        avg_response_time = (
+            sum(self.response_times) / len(self.response_times)
+            if self.response_times else 0
+        )
+        
+        return {
+            'uptime': str(uptime),
+            'requests': self.request_count,
+            'errors': self.error_count,
+            'error_rate': self.error_count / self.request_count if self.request_count > 0 else 0,
+            'avg_response_time': avg_response_time,
+            'cpu_percent': psutil.cpu_percent(),
+            'memory_percent': psutil.virtual_memory().percent
+        }
+
+# Add to app.py
+from utils.monitor import SystemMonitor
+monitor = SystemMonitor()
+
+# Add monitoring endpoint
+def do_GET(self):
+    if self.path == '/api/stats':
+        stats = monitor.get_stats()
+        self._send_json_response(stats)
+        return
+    # ... rest of GET handler
+```
+
+4. Advanced Logging (utils/logger.py):
+```python
+import logging
+import logging.handlers
+import os
+from datetime import datetime
+
+def setup_logging(log_dir='logs'):
+    """Configure advanced logging with rotation and different levels."""
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Create formatters
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    console_formatter = logging.Formatter(
+        '%(levelname)s: %(message)s'
+    )
+    
+    # File handler with rotation
+    file_handler = logging.handlers.RotatingFileHandler(
+        os.path.join(log_dir, 'app.log'),
+        maxBytes=1024*1024,  # 1MB
+        backupCount=5
+    )
+    file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(logging.INFO)
+    
+    # Error file handler
+    error_handler = logging.handlers.RotatingFileHandler(
+        os.path.join(log_dir, 'error.log'),
+        maxBytes=1024*1024,
+        backupCount=5
+    )
+    error_handler.setFormatter(file_formatter)
+    error_handler.setLevel(logging.ERROR)
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(console_formatter)
+    console_handler.setLevel(logging.INFO)
+    
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(error_handler)
+    root_logger.addHandler(console_handler)
+
+# Add to app.py
+from utils.logger import setup_logging
+setup_logging()
+```
+
+5. Production Configuration (config.py):
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class BaseConfig:
+    """Base configuration."""
+    DEBUG = False
+    PORT = int(os.getenv('PORT', 5002))
+    DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'chat.db')
+    GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+    BACKUP_DIR = 'backups'
+    LOG_DIR = 'logs'
+    MAX_BACKUPS = 5
+    RATE_LIMIT_MAX_REQUESTS = 60
+    RATE_LIMIT_WINDOW_SECONDS = 60
+
+class DevelopmentConfig(BaseConfig):
+    """Development configuration."""
+    DEBUG = True
+    
+class ProductionConfig(BaseConfig):
+    """Production configuration."""
+    PORT = int(os.getenv('PORT', 80))
+    RATE_LIMIT_MAX_REQUESTS = 30
+    RATE_LIMIT_WINDOW_SECONDS = 60
+    
+class TestingConfig(BaseConfig):
+    """Testing configuration."""
+    TESTING = True
+    DATABASE_PATH = ':memory:'
+
+# Usage in app.py
+from config import DevelopmentConfig, ProductionConfig, TestingConfig
+
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig
+}[os.getenv('FLASK_ENV', 'development')]()
+```
+
+Implementation Steps:
+1. Add rate limiting to protect against abuse
+2. Implement automated database backups
+3. Add system monitoring and statistics
+4. Configure advanced logging
+5. Separate configurations for different environments
+
+Verification Steps:
+1. Test rate limiting:
+   - Send multiple requests quickly
+   - Verify 429 responses after limit
+   
+2. Test backup system:
+   - Verify daily backups are created
+   - Check old backups are cleaned up
+   - Restore from backup successfully
+   
+3. Test monitoring:
+   - Check /api/stats endpoint
+   - Verify all metrics are collected
+   - Monitor during high load
+   
+4. Verify logging:
+   - Check log rotation
+   - Verify error logging
+   - Check log formats
+   
+5. Test configurations:
+   - Switch between environments
+   - Verify correct settings
+   - Test production settings
