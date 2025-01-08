@@ -1,0 +1,17 @@
+Let's create the frontend interface. Create an HTML file with:
+
+Requirements:
+1. Create templates/index.html with:
+   - Proper HTML5 structure
+   - Responsive viewport meta tag
+   - Google Fonts integration (Inter font)
+   - Header section with title and description
+   - Messages container
+   - Message input form
+   - Link to external CSS
+
+2. Structure:
+   - Header with app title "BookChat"
+   - Messages area for chat history
+   - Fixed input area at bottom
+   - Send button with proper styling

@@ -1,0 +1,61 @@
+Technical Specifications:
+
+1. Server (app.py):
+```python
+PORT = 5002
+STATIC_DIR = 'static'
+TEMPLATES_DIR = 'templates'
+```
+
+2. Database Schema (utils/db.py):
+```sql
+CREATE TABLE messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    git_commit_hash TEXT,
+    synced BOOLEAN DEFAULT FALSE
+)
+```
+
+3. API Endpoints:
+```
+GET /api/messages
+- Returns: JSON array of messages
+- Query params: limit (default: 50), offset (default: 0)
+
+POST /api/messages
+- Accepts: JSON {content: string}
+- Returns: Created message object
+```
+
+4. Frontend Structure:
+```
+bookchat/
+├── app.py
+├── requirements.txt
+├── chat.db
+├── static/
+│   └── styles.css
+├── templates/
+│   └── index.html
+└── utils/
+    ├── __init__.py
+    ├── db.py
+    └── git_handler.py
+```
+
+5. Dependencies (requirements.txt):
+```
+sqlite3
+python-dotenv
+```
+
+Key Features to Verify:
+1. Messages persist in SQLite database
+2. Real-time message updates every 5 seconds
+3. Proper error handling and user feedback
+4. Responsive design works on mobile devices
+5. Messages maintain order and timestamps
+6. Clean, modern UI with animations
+7. GitHub synchronization working

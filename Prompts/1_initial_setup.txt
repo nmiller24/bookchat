@@ -1,0 +1,16 @@
+Help me create a simple chat application using Python. Let's start with the basic server setup:
+
+Requirements:
+1. Use Python's http.server for the backend
+2. Listen on localhost:5002
+3. Handle basic routing for:
+   - Serving static files
+   - Serving HTML templates
+   - API endpoints for messages
+4. Include CORS support
+5. Create a basic SQLite database for message storage
+
+Create the following files:
+1. app.py - Main server file
+2. utils/db.py - Database handling
+3. requirements.txt - Project dependencies

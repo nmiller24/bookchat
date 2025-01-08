@@ -1,0 +1,14 @@
+Let's add version control and GitHub integration:
+
+Requirements:
+1. Initialize Git repository
+2. Create .gitignore file for:
+   - __pycache__
+   - .env
+   - *.pyc
+   - chat.db
+
+3. Add GitHub workflow:
+   - Commit message handling
+   - Database synchronization
+   - Error handling
