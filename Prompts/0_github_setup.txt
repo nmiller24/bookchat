@@ -1,0 +1,124 @@
+Initial GitHub Repository Setup
+
+1. Create a new GitHub repository:
+   - Go to github.com and sign in
+   - Click the '+' button and select 'New repository'
+   - Name: bookchat
+   - Description: A modern chat application with GitHub integration
+   - Initialize with: README.md
+   - Add .gitignore: Python
+   - License: MIT
+
+2. Clone the repository locally:
+```bash
+# Replace YOUR_USERNAME with your GitHub username
+git clone https://github.com/YOUR_USERNAME/bookchat.git
+cd bookchat
+```
+
+3. Set up Git configuration:
+```bash
+# Set your name and email
+git config user.name "Your Name"
+git config user.email "your.email@example.com"
+
+# Set default branch to main
+git config --global init.defaultBranch main
+```
+
+4. Create project structure:
+```bash
+# Create necessary directories
+mkdir static templates utils
+touch requirements.txt
+```
+
+5. Create and edit .env file:
+```bash
+# Create .env file (this will be ignored by git)
+echo "GITHUB_TOKEN=your_github_token_here" > .env
+```
+
+6. Get GitHub Personal Access Token:
+   - Go to GitHub.com → Settings → Developer settings → Personal access tokens
+   - Click "Generate new token (classic)"
+   - Name: BookChat App
+   - Select scopes: 
+     - repo (all)
+     - user (all)
+   - Copy the generated token
+   - Paste it in your .env file
+
+7. Update .gitignore:
+```
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+```
+
+8. Create initial README.md:
+```markdown
+# BookChat
+
+A modern chat application with GitHub integration, built with Python and SQLite.
+
+## Features
+- Real-time message updates
+- Modern, responsive UI
+- GitHub integration
+- Message persistence
+- Clean, maintainable code
+
+## Setup
+1. Clone the repository
+2. Create and activate virtual environment
+3. Install dependencies: `pip install -r requirements.txt`
+4. Set up environment variables
+5. Run the server: `python app.py`
+
+## Development
+- Python 3.8+
+- SQLite database
+- HTTP server
+- Modern frontend (HTML5, CSS3, JavaScript)
+```
+
+9. Initial commit:
+```bash
+git add .
+git commit -m "Initial project setup"
+git push origin main
+```
+
+Verification Steps:
+1. Repository exists on GitHub
+2. All basic directories are created locally
+3. Git is properly configured
+4. .env file is created but not tracked by git
+5. README.md is informative and well-formatted
+6. GitHub token is working
+
+Next Steps:
+- Proceed to Prompt 1 (Initial Setup) once this setup is complete
+- Keep your GitHub token secure and never commit it to the repository
+- Make sure you can push/pull from the repository before continuing
