@@ -8,7 +8,7 @@ from utils.git_handler import git_handler
 from datetime import datetime
 
 # Constants
-PORT = 8081
+PORT = 5002  # Changed port to avoid conflicts
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 
@@ -29,40 +29,72 @@ class ChatRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def _serve_static_file(self, filepath):
         """Serve static files (CSS, JS, etc.)."""
+        print(f"Attempting to serve file: {filepath}")  # Debug logging
         try:
-            with open(filepath, 'rb') as f:
+            with open(filepath, 'r', encoding='utf-8') as f:  
                 content = f.read()
+                print(f"File content length: {len(content)}")  # Debug logging
                 self.send_response(200)
                 
                 # Set content type based on file extension
                 if filepath.endswith('.css'):
-                    self.send_header('Content-Type', 'text/css')
+                    content_type = 'text/css'
                 elif filepath.endswith('.js'):
-                    self.send_header('Content-Type', 'application/javascript')
+                    content_type = 'application/javascript'
                 elif filepath.endswith('.html'):
-                    self.send_header('Content-Type', 'text/html')
-                    
-                self.send_header('Content-Length', len(content))
+                    content_type = 'text/html; charset=utf-8'  
+                else:
+                    content_type = 'text/plain'
+                
+                print(f"Serving file with content type: {content_type}")  # Debug logging
+                self.send_header('Content-Type', content_type)
+                self.send_header('Content-Length', len(content.encode('utf-8')))  
                 self._send_cors_headers()
                 self.end_headers()
-                self.wfile.write(content)
+                self.wfile.write(content.encode('utf-8'))  
+                print("File served successfully")  # Debug logging
         except FileNotFoundError:
+            print(f"File not found: {filepath}")  # Debug logging
             self.send_error(404, 'File not found')
+        except Exception as e:
+            print(f"Error serving file: {str(e)}")  # Debug logging
+            self.send_error(500, f'Server error: {str(e)}')
 
     def do_GET(self):
         """Handle GET requests."""
+        print(f"\nReceived GET request for path: {self.path}")  # Debug logging
         parsed_path = urlparse(self.path)
         path = parsed_path.path
         
         # Serve index.html for root path
         if path == '/':
-            self._serve_static_file(os.path.join(TEMPLATES_DIR, 'index.html'))
+            print("Serving index.html")  # Debug logging
+            filepath = os.path.join(TEMPLATES_DIR, 'index.html')
+            print(f"Looking for index.html at: {filepath}")  # Debug logging
+            if os.path.exists(filepath):
+                print(f"Found index.html at {filepath}")  # Debug logging
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        print(f"Content length: {len(content)}")
+                        print("First 100 chars:", content[:100])
+                    self._serve_static_file(filepath)
+                except Exception as e:
+                    print(f"Error reading file: {str(e)}")
+            else:
+                print(f"index.html not found at {filepath}")  # Debug logging
+                self.send_error(404, 'File not found')
             return
             
         # Serve static files
         if path.startswith('/static/'):
-            relative_path = path[8:]  # Remove '/static/' prefix
-            filepath = os.path.join(STATIC_DIR, relative_path)
+            print(f"Serving static file: {path}")  # Debug logging
+            filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), path[1:])
+            print(f"Looking for static file at: {filepath}")  # Debug logging
+            if os.path.exists(filepath):
+                print(f"Found static file at {filepath}")  # Debug logging
+            else:
+                print(f"Static file not found at {filepath}")  # Debug logging
             self._serve_static_file(filepath)
             return
             
@@ -145,18 +177,25 @@ class ChatRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"Error processing message: {str(e)}")
                 self.send_error(500, f'Server error: {str(e)}')
+            return
             
         # Handle other POST endpoints here
         self.send_error(404, 'Endpoint not found')
 
 def run_server():
     """Start the HTTP server."""
-    class TCPServerReusable(socketserver.TCPServer):
-        allow_reuse_address = True
-    
-    with TCPServerReusable(("", PORT), ChatRequestHandler) as httpd:
+    try:
+        print(f"Starting server on port {PORT}...")
+        server_address = ('localhost', PORT)  
+        class TCPServerReusable(http.server.HTTPServer):
+            allow_reuse_address = True  
+            
+        httpd = TCPServerReusable(server_address, ChatRequestHandler)
         print(f"Server running at http://localhost:{PORT}")
         httpd.serve_forever()
+    except Exception as e:
+        print(f"Failed to start server: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     run_server()
